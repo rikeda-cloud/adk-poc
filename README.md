@@ -28,3 +28,5 @@
    GOOGLE_API_KEY=______________APIKEY__________________
    ```
    環境変数は外部LLMサービスによって異なります(https://google.github.io/adk-docs/get-started/quickstart/#set-up-the-model)
+
+5. `adk run ./my_agent/` コマンドでターミナルベースでプロンプトを入力できます。
