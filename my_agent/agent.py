@@ -1,44 +1,34 @@
-import datetime
-from zoneinfo import ZoneInfo
 from google.adk.agents import Agent
+import requests
 
 
-def get_weather(city: str) -> dict:
-    if city.lower() == "new york":
+def fetch_url(url: str) -> dict:
+    """Fetches the content of a URL.
+
+    Args:
+        url: The URL to fetch.
+
+    Returns:
+        A dictionary with the status and the fetched content.
+    """
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
         return {
             "status": "success",
-            "report": (
-                "The weather in New York is sunny with a temperature of 25 degrees Celsius (77 degrees Fahrenheit)."
-            ),
+            "content": response.text,
         }
-    else:
+    except requests.exceptions.RequestException as e:
         return {
             "status": "error",
-            "error_message": f"Weather information for '{city}' is not available.",
+            "error_message": str(e),
         }
-
-
-def get_current_time(city: str) -> dict:
-    if city.lower() == "new york":
-        tz_identifier = "America/New_York"
-    else:
-        return {
-            "status": "error",
-            "error_message": (f"Sorry, I don't have timezone information for {city}."),
-        }
-
-    tz = ZoneInfo(tz_identifier)
-    now = datetime.datetime.now(tz)
-    report = f"The current time in {city} is {now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}"
-    return {"status": "success", "report": report}
 
 
 root_agent = Agent(
-    name="weather_time_agent",
+    name="my_agent",
     model="gemini-2.0-flash",
-    description=("Agent to answer questions about the time and weather in a city."),
-    instruction=(
-        "You are a helpful agent who can answer user questions about the time and weather in a city."
-    ),
-    tools=[get_weather, get_current_time],
+    description="An agent that can fetch content from URLs.",
+    instruction="You are an agent that fetches content from URLs. Use the fetch_url tool to perform this action.",
+    tools=[fetch_url],
 )
