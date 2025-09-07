@@ -1,7 +1,12 @@
 from google.adk.agents import Agent
+from google.adk.agents import LlmAgent
 from google.adk.tools import AgentTool
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+from mcp import StdioServerParameters
 import requests
 import datetime
+import os
 
 
 def fetch_url(url: str) -> dict:
@@ -37,6 +42,7 @@ def write_to_file(filename: str, data: str) -> dict:
     Returns:
         A dictionary with the status.
     """
+    print("write_to_file call!!!")
     try:
         with open(filename, "w") as f:
             f.write(data)
@@ -77,6 +83,39 @@ def emergency_call() -> dict:
         }
 
 
+TARGET_FOLDER_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "/home/rikeda",
+)
+
+file_system_agent = LlmAgent(
+    model="gemini-2.0-flash",
+    name="filesystem_assistant_agent",
+    instruction="Help the user manage their files. You can list files, read files, etc.",
+    tools=[
+        MCPToolset(
+            connection_params=StdioConnectionParams(
+                server_params=StdioServerParameters(
+                    command="npx",
+                    args=[
+                        "-y",  # Argument for npx to auto-confirm install
+                        "@modelcontextprotocol/server-filesystem",
+                        # IMPORTANT: This MUST be an ABSOLUTE path to a folder the
+                        # npx process can access.
+                        # Replace with a valid absolute path on your system.
+                        # For example: "/Users/youruser/accessible_mcp_files"
+                        # or use a dynamically constructed absolute path:
+                        os.path.abspath(TARGET_FOLDER_PATH),
+                    ],
+                ),
+            ),
+            # Optional: Filter which tools from the MCP server are exposed
+            # tool_filter=['list_directory', 'read_file']
+        )
+    ],
+)
+
+
 emergency_agent = Agent(
     name="emergency_agent",
     model="gemini-2.0-flash",
@@ -91,5 +130,10 @@ root_agent = Agent(
     model="gemini-2.0-flash",
     description="An agent that can fetch content from URLs, extract URLs from text, and write to files. It can also forward urgent requests to another agent.",
     instruction="You are a general-purpose agent. Your primary function is to handle routine tasks using your tools. However, you have a critical duty: you must identify any urgent or emergency-related keywords in the user's request. Keywords include '緊急' (emergency), '至急' (urgent), '助けて' (help), 'アラート' (alert), 'インシデント' (incident). If any of these keywords are present, you MUST immediately delegate the task to the 'emergency_agent' tool without attempting to handle it yourself. For all other non-urgent requests, use your `fetch_url` and `write_to_file` tools as appropriate.",
-    tools=[fetch_url, write_to_file, AgentTool(emergency_agent)],
+    tools=[
+        fetch_url,
+        write_to_file,
+        AgentTool(emergency_agent),
+        AgentTool(file_system_agent),
+    ],
 )
