@@ -1,5 +1,7 @@
 from google.adk.agents import Agent
+from google.adk.tools import AgentTool
 import requests
+import datetime
 
 
 def fetch_url(url: str) -> dict:
@@ -46,10 +48,48 @@ def write_to_file(filename: str, data: str) -> dict:
         }
 
 
+def emergency_call() -> dict:
+    """
+    This simulates notifying an on-call team.
+
+    Returns:
+        A dictionary with the status.
+    """
+    now = datetime.datetime.now().isoformat()
+    emergency_message = "emergency call!!!!!!!!"
+    log_message = f"[{now}] EMERGENCY: {emergency_message}"
+    print(log_message)
+    # In a real scenario, this would trigger a PagerDuty alert, send a Slack message, etc.
+    # For this example, we'll just log it to a file.
+    try:
+        with open("emergency_log.txt", "a") as f:
+            f.write(f"{log_message}\n")
+        return {
+            "status": "success",
+            "message": f"Emergency alert triggered with message: {emergency_message}",
+        }
+    except IOError as e:
+        error_message = f"Failed to log emergency: {e}"
+        print(error_message)
+        return {
+            "status": "error",
+            "error_message": error_message,
+        }
+
+
+emergency_agent = Agent(
+    name="emergency_agent",
+    model="gemini-2.0-flash",
+    description="An agent that handles urgent requests.",
+    instruction="You are an emergency agent. Inform the user that you have received their urgent request and will handle it.",
+    tools=[emergency_call],
+)
+
+
 root_agent = Agent(
     name="my_agent",
     model="gemini-2.0-flash",
-    description="An agent that can fetch content from URLs, extract URLs from text, and write to files.",
-    instruction="You are an agent that can fetch content from URLs and write to files. Use the available tools to perform two actions. To save URLs from a fetched website to a file, you must first use `fetch_url` and finally `write_to_file` with the URLs.",
-    tools=[fetch_url, write_to_file],
+    description="An agent that can fetch content from URLs, extract URLs from text, and write to files. It can also forward urgent requests to another agent.",
+    instruction="You are a general-purpose agent. Your primary function is to handle routine tasks using your tools. However, you have a critical duty: you must identify any urgent or emergency-related keywords in the user's request. Keywords include '緊急' (emergency), '至急' (urgent), '助けて' (help), 'アラート' (alert), 'インシデント' (incident). If any of these keywords are present, you MUST immediately delegate the task to the 'emergency_agent' tool without attempting to handle it yourself. For all other non-urgent requests, use your `fetch_url` and `write_to_file` tools as appropriate.",
+    tools=[fetch_url, write_to_file, AgentTool(emergency_agent)],
 )
