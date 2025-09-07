@@ -32,28 +32,6 @@ def fetch_url(url: str) -> dict:
         }
 
 
-def write_to_file(filename: str, data: str) -> dict:
-    """Writes data to a file. If the file does not exist, it will be created.
-
-    Args:
-        filename: The name of the file to write to.
-        data: The data to write to the file.
-
-    Returns:
-        A dictionary with the status.
-    """
-    print("write_to_file call!!!")
-    try:
-        with open(filename, "w") as f:
-            f.write(data)
-        return {"status": "success"}
-    except IOError as e:
-        return {
-            "status": "error",
-            "error_message": str(e),
-        }
-
-
 def emergency_call() -> dict:
     """
     This simulates notifying an on-call team.
@@ -81,6 +59,15 @@ def emergency_call() -> dict:
             "status": "error",
             "error_message": error_message,
         }
+
+
+emergency_agent = Agent(
+    name="emergency_agent",
+    model="gemini-2.0-flash",
+    description="An agent that handles urgent requests.",
+    instruction="You are an emergency agent. Inform the user that you have received their urgent request and will handle it.",
+    tools=[emergency_call],
+)
 
 
 TARGET_FOLDER_PATH = os.path.join(
@@ -116,23 +103,13 @@ file_system_agent = LlmAgent(
 )
 
 
-emergency_agent = Agent(
-    name="emergency_agent",
-    model="gemini-2.0-flash",
-    description="An agent that handles urgent requests.",
-    instruction="You are an emergency agent. Inform the user that you have received their urgent request and will handle it.",
-    tools=[emergency_call],
-)
-
-
 root_agent = Agent(
     name="my_agent",
     model="gemini-2.0-flash",
-    description="An agent that can fetch content from URLs, extract URLs from text, and write to files. It can also forward urgent requests to another agent.",
-    instruction="You are a general-purpose agent. Your primary function is to handle routine tasks using your tools. However, you have a critical duty: you must identify any urgent or emergency-related keywords in the user's request. Keywords include '緊急' (emergency), '至急' (urgent), '助けて' (help), 'アラート' (alert), 'インシデント' (incident). If any of these keywords are present, you MUST immediately delegate the task to the 'emergency_agent' tool without attempting to handle it yourself. For all other non-urgent requests, use your `fetch_url` and `write_to_file` tools as appropriate.",
+    description="An agent that can fetch content from URLs, extract URLs from text, and manage files. It can also forward urgent requests to another agent.",
+    instruction="You are a general-purpose agent. Your primary function is to handle routine tasks using your tools. However, you have a critical duty: you must identify any urgent or emergency-related keywords in the user's request. Keywords include '緊急' (emergency), '至急' (urgent), '助けて' (help), 'アラート' (alert), 'インシデント' (incident). If any of these keywords are present, you MUST immediately delegate the task to the 'emergency_agent' tool without attempting to handle it yourself. For all other non-urgent requests, use your `fetch_url` tool as appropriate. If file operations are required, delegate the task to the `file_system_agent`.",
     tools=[
         fetch_url,
-        write_to_file,
         AgentTool(emergency_agent),
         AgentTool(file_system_agent),
     ],
