@@ -103,14 +103,35 @@ file_system_agent = LlmAgent(
 )
 
 
+shell_command_agent = LlmAgent(
+    model="gemini-2.0-flash",
+    name="shell_command_agent",
+    instruction="Help the user run shell commands.",
+    tools=[
+        MCPToolset(
+            connection_params=StdioConnectionParams(
+                server_params=StdioServerParameters(
+                    command="npx",
+                    args=[
+                        "-y",
+                        "@mkusaka/mcp-shell-server",
+                    ],
+                ),
+            ),
+        )
+    ],
+)
+
+
 root_agent = Agent(
     name="my_agent",
     model="gemini-2.0-flash",
     description="An agent that can fetch content from URLs, extract URLs from text, and manage files. It can also forward urgent requests to another agent.",
-    instruction="You are a general-purpose agent. Your primary function is to handle routine tasks using your tools. However, you have a critical duty: you must identify any urgent or emergency-related keywords in the user's request. Keywords include '緊急' (emergency), '至急' (urgent), '助けて' (help), 'アラート' (alert), 'インシデント' (incident). If any of these keywords are present, you MUST immediately delegate the task to the 'emergency_agent' tool without attempting to handle it yourself. For all other non-urgent requests, use your `fetch_url` tool as appropriate. If file operations are required, delegate the task to the `file_system_agent`.",
+    instruction="You are a general-purpose agent. Your primary function is to handle routine tasks using your tools. However, you have a critical duty: you must identify any urgent or emergency-related keywords in the user's request. Keywords include '緊急' (emergency), '至急' (urgent), '助けて' (help), 'アラート' (alert), 'インシデント' (incident). If any of these keywords are present, you MUST immediately delegate the task to the 'emergency_agent' tool without attempting to handle it yourself. For all other non-urgent requests, use your `fetch_url` tool as appropriate. If file operations are required, delegate the task to the `file_system_agent`. If shell commands are required, delegate the task to the `shell_command_agent`.",
     tools=[
         fetch_url,
         AgentTool(emergency_agent),
         AgentTool(file_system_agent),
+        AgentTool(shell_command_agent),
     ],
 )
