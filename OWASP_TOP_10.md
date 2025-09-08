@@ -53,7 +53,8 @@ OWASP Top 10 2021年版の各項目と、その簡単な説明です。
 *   ユーザーの識別や認証、セッション管理に関する不備を指す
 *   Ex: ブルートフォース攻撃への対策不足、弱いパスワードの許容、セッションIDの不適切な管理など
 #### メモ
-*   https://www.langmeier-software.com/ja/seiten/news/die-top-10-der-unsichersten-passwoerter-　で公開されているような弱いパスワードの許容
+*   https://www.langmeier-software.com/ja/seiten/news/die-top-10-der-unsichersten-passwoerter-
+    で公開されているような弱いパスワードの許容
 *   銀行などのシステムで、4桁の数値のパスワードを要求するが、検証が失敗しても何回でも入力できてしまう
 *   セッションIDが連番のために推測可能
 
