@@ -16,25 +16,36 @@ def generate_jwt(header: dict, payload: dict, key: str, algorithm: str) -> dict:
     return {"jwt": token}
 
 
-def decode_jwt(token: str, algorithms: str) -> dict:
+def decode_jwt(
+    token: str, algorithms: list[str], key: str, verify_signature: bool
+) -> dict:
     """
     JWTをデコードしてheader, payload, signatureを返す。
-    署名はいかなる時も検証されない。
-    algorithmsを指定しない場合は空文字列を指定する。
+    verify_signatureにFalseが指定された場合、署名の検証行われない。
+    verify_signature=Falseの場合、algorithmsとkeyは無視される。
+    verify_signature=Trueで署名の検証に失敗した場合、{"status": "error", "message": 失敗情報}が返る
     """
     # decodeはheaderを返さないので、get_unverified_headerを利用
     header = jwt.get_unverified_header(token)
-    payload = jwt.decode(
-        token,
-        "",
-        algorithms if algorithms != "" else None,
-        options={"verify_signature": False},
-    )
+    try:
+        payload = jwt.decode(
+            token,
+            key,
+            algorithms,
+            options={"verify_signature": verify_signature},
+        )
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
     # signature部分を手動で抽出
     parts = token.split(".")
     signature = parts[2] if len(parts) == 3 else ""
-    return {"header": header, "payload": payload, "signature": signature}
+    return {
+        "status": "success",
+        "header": header,
+        "payload": payload,
+        "signature": signature,
+    }
 
 
 root_agent = LlmAgent(
@@ -42,7 +53,7 @@ root_agent = LlmAgent(
     name="jwt_attack_agent",
     description="JWTの作成、閲覧、書き換えを行うことが可能なエージェント",
     instruction="""
-    JWTの作成、JWTのheader, bodyの表示、JWTの書き換えを行うことが可能です。
+    JWTの作成、JWTのheader, bodyの表示、JWTの書き換え、JWTの検証を行うことが可能です。
 
     JWTの作成：
         generate_jwtツール関数を用いて、生成。
@@ -53,6 +64,9 @@ root_agent = LlmAgent(
     JWTの書き換え：
         decode_jwtツール関数を用いて、書き換え前JWTのheader・payloadを確認し、
         generate_jwtツール関数を用いて、書き換え後のheader・payloadを指定して新たなJWTを作成。
+
+    JWTの検証：
+        decode_jwtツール関数を用いて、secretとalgorithmsを指定してデコードし、"status"が"success" or "error"かでJWT検証の成功・失敗を判断できます。
 
 
     generate_jwtとdecode_jwt内ではPyJWTを用いています。下記はPyJWTのAPIリファレンスです。
